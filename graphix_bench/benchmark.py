@@ -1,21 +1,27 @@
 """Run MQT Benchmarks."""
 
+from __future__ import annotations
+
 import os
 import threading
 import time
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 
-import psutil  # type: ignore
-from graphix import Circuit  # type: ignore
-from graphix.states import BasicStates  # type: ignore
-from graphix_bench.mqt_bench_to_graphix import convert  # type: ignore
-from mqt.bench import get_benchmark_indep  # type: ignore
-from mqt.bench.benchmarks import get_available_benchmark_names  # type: ignore
+import psutil
+from graphix.states import BasicStates
+from mqt.bench import get_benchmark_indep
+from mqt.bench.benchmarks import get_available_benchmark_names
 
 from graphix_bench import Backend
+from graphix_bench.converter import convert
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from graphix import Circuit
 
 
-def _performance_monitor(function: Callable) -> tuple[float, float]:
+def _performance_monitor(function: Callable) -> tuple[float, float]:  # type: ignore[type-arg]
     """Measure the peak memory usage and execution time of a function.
 
     Parameters
@@ -28,11 +34,11 @@ def _performance_monitor(function: Callable) -> tuple[float, float]:
     tuple[float, float]
         A tuple containing the total execution time in seconds and the peak memory usage in MB.
     """
-    process = psutil.Process(os.getpid())
+    process = psutil.Process(os.getpid())  # type: ignore[no-untyped-call]
     peak = 0
     running = True
 
-    def monitor():
+    def monitor() -> None:
         nonlocal peak
         while running:
             peak = max(peak, process.memory_info().rss)
@@ -67,9 +73,10 @@ def run_benchmark_circuit(circuit: Circuit, backend: Backend) -> tuple[float, fl
         A tuple containing the total execution time in seconds and the memory usage in MB.
     """
 
-    def run():
+    def run() -> None:
         circuit.transpile().pattern.simulate_pattern(
-            backend=backend, input_state=BasicStates.ZERO
+            backend=backend,  # type: ignore[call-overload]
+            input_state=BasicStates.ZERO,
         )
 
     total_time, peak_mb = _performance_monitor(run)
@@ -78,7 +85,9 @@ def run_benchmark_circuit(circuit: Circuit, backend: Backend) -> tuple[float, fl
 
 
 def run_benchmark(
-    benchmark: str, circuit_size: int, backend: Backend
+    benchmark: str,
+    circuit_size: int,
+    backend: Backend,
 ) -> tuple[float, float]:
     """Run a specific benchmark with given circuit size and backend.
 
@@ -132,17 +141,17 @@ def run_all_benchmarks(
     for benchmark in get_available_benchmark_names():
         print(f"Running benchmark: {benchmark}")
 
-        qubit_range = range(4, 13, 2)
+        qubit_range = range(4, 11, 2)
 
         # Special cases for benchmarks with specific qubit requirements
-        if benchmark in [
+        if benchmark in {
             "half_adder",
             "hrs_cumulative_multiplier",
             "multiplier",
             "rg_qft_multiplier",
             "shor",
             "vbe_ripple_carry_adder",
-        ]:
+        }:
             match benchmark:
                 # odd integer >= 3
                 case "half_adder":

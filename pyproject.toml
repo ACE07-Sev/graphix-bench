@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "graphix-bench"
+version = "0.1.0"
+description = "Benchmarking suite for graphix"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "ACE07-Sev" },
+]
+keywords = ["quantum", "benchmarking", "graphix"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "graphix",
+    "graphix_qasm_parser",
+    "mqt.bench",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-benchmark",
+    "mypy",
+    "pyright",
+    "ruff",
+]
+
+[project.urls]
+Homepage = "https://github.com/ACE07-Sev/graphix-bench"
+Repository = "https://github.com/ACE07-Sev/graphix-bench"
+Issues = "https://github.com/ACE07-Sev/graphix-bench/issues"
+
+[tool.setuptools.packages.find]
+include = ["graphix_bench*"]
+
+[tool.setuptools.package-data]
+"graphix_bench" = ["py.typed"]
+
+[tool.pyright]
+include = ["graphix_bench", "tests"]
+typeCheckingMode = "strict"
+reportUnknownArgumentType = "information"
+reportUnknownLambdaType = "information"
+reportUnknownMemberType = "information"
+reportUnknownParameterType = "information"
+reportUnknownVariableType = "information"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore:Couldn't import `kahypar`"]
+
+[tool.mypy]
+files = ["*.py", "graphix_bench", "tests"]
+follow_untyped_imports = true
+strict = true
+
+[tool.coverage.report]
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError\\(.*\\)",
+  "return NotImplemented",
+  "typing_extensions.assert_never\\(.*\\)",
+  "assert_never\\(.*\\)",
+  "@abc.abstractmethod",
+]
