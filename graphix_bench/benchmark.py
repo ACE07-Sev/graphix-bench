@@ -3,20 +3,19 @@
 import os
 import threading
 import time
-from typing import Literal
 from collections.abc import Callable
 
-import psutil # type: ignore
-from graphix import Circuit
-from graphix.states import BasicStates
-from graphix_bench.mqt_bench_to_graphix import convert
-from mqt.bench import get_benchmark_indep
-from mqt.bench.benchmarks import get_available_benchmark_names
+import psutil  # type: ignore
+from graphix import Circuit  # type: ignore
+from graphix.states import BasicStates  # type: ignore
+from graphix_bench.mqt_bench_to_graphix import convert  # type: ignore
+from mqt.bench import get_benchmark_indep  # type: ignore
+from mqt.bench.benchmarks import get_available_benchmark_names  # type: ignore
 
-ALL_BACKENDS = Literal["statevector", "tensornetwork", "densitymatrix", "mps"]
+from graphix_bench import Backend
 
 
-def measure_peak(function: Callable) -> tuple[float, float]:
+def _performance_monitor(function: Callable) -> tuple[float, float]:
     """Measure the peak memory usage and execution time of a function.
 
     Parameters
@@ -49,16 +48,17 @@ def measure_peak(function: Callable) -> tuple[float, float]:
     running = False
     t.join()
 
-    return total, peak/(1024**2)
+    return total, peak / (1024**2)
 
-def run_benchmark_circuit(circuit: Circuit, backend: ALL_BACKENDS) -> tuple[float, float]:
+
+def run_benchmark_circuit(circuit: Circuit, backend: Backend) -> tuple[float, float]:
     """Run the benchmark on the given Graphix circuit and measure time and memory usage.
 
     Parameters
     ----------
     circuit : Circuit
         The Graphix circuit to run the benchmark on.
-    backend : ALL_BACKENDS
+    backend : Backend
         The backend to use for simulation.
 
     Returns
@@ -66,14 +66,20 @@ def run_benchmark_circuit(circuit: Circuit, backend: ALL_BACKENDS) -> tuple[floa
     tuple[float, float]
         A tuple containing the total execution time in seconds and the memory usage in MB.
     """
-    def run():
-        circuit.transpile().pattern.simulate_pattern(backend=backend, input_state=BasicStates.ZERO)
 
-    total_time, peak_mb = measure_peak(run)
+    def run():
+        circuit.transpile().pattern.simulate_pattern(
+            backend=backend, input_state=BasicStates.ZERO
+        )
+
+    total_time, peak_mb = _performance_monitor(run)
 
     return total_time, peak_mb
 
-def run_benchmark(benchmark: str, circuit_size: int, backend: ALL_BACKENDS) -> tuple[float, float]:
+
+def run_benchmark(
+    benchmark: str, circuit_size: int, backend: Backend
+) -> tuple[float, float]:
     """Run a specific benchmark with given circuit size and backend.
 
     Parameters
@@ -82,7 +88,7 @@ def run_benchmark(benchmark: str, circuit_size: int, backend: ALL_BACKENDS) -> t
         The name of the benchmark to run.
     circuit_size : int
         The number of qubits for the circuit.
-    backend : ALL_BACKENDS
+    backend : Backend
         The backend to use for simulation.
 
     Returns
@@ -91,18 +97,19 @@ def run_benchmark(benchmark: str, circuit_size: int, backend: ALL_BACKENDS) -> t
         A tuple containing the total execution time in seconds and the memory usage in MB.
     """
     return run_benchmark_circuit(
-        convert(
-            get_benchmark_indep(benchmark=benchmark, circuit_size=circuit_size)
-        ),
-        backend=backend
+        convert(get_benchmark_indep(benchmark=benchmark, circuit_size=circuit_size)),
+        backend=backend,
     )
 
-def run_benchmarks(backend: ALL_BACKENDS) -> tuple[dict[str, list[float]], dict[str, list[float]]]:
+
+def run_all_benchmarks(
+    backend: Backend,
+) -> tuple[dict[str, list[float]], dict[str, list[float]]]:
     """Run all benchmarks and collect results.
 
     Parameters
     ----------
-    backend : ALL_BACKENDS
+    backend : Backend
         The backend to use for simulation.
 
     Returns
@@ -110,7 +117,15 @@ def run_benchmarks(backend: ALL_BACKENDS) -> tuple[dict[str, list[float]], dict[
     tuple[dict[str, list[float]], dict[str, list[float]]]
         A tuple containing two dictionaries: one for memory results and one for time results.
         Each dictionary maps benchmark names to lists of measurements.
+
+    Raises
+    ------
+    ValueError
+        If the provided backend is not valid.
     """
+    if backend not in set(Backend):
+        raise ValueError(f"Invalid backend: {backend}. Must be one of {set(Backend)}.")
+
     memory_results: dict[str, list[float]] = {}
     time_results: dict[str, list[float]] = {}
 
@@ -126,7 +141,7 @@ def run_benchmarks(backend: ALL_BACKENDS) -> tuple[dict[str, list[float]], dict[
             "multiplier",
             "rg_qft_multiplier",
             "shor",
-            "vbe_ripple_carry_adder"
+            "vbe_ripple_carry_adder",
         ]:
             match benchmark:
                 # odd integer >= 3
@@ -151,10 +166,8 @@ def run_benchmarks(backend: ALL_BACKENDS) -> tuple[dict[str, list[float]], dict[
         for i in qubit_range:
             print(f"Running with {i} qubits...")
             time, mem = run_benchmark_circuit(
-                convert(
-                    get_benchmark_indep(benchmark=benchmark, circuit_size=i)
-                ),
-                backend=backend
+                convert(get_benchmark_indep(benchmark=benchmark, circuit_size=i)),
+                backend=backend,
             )
             if benchmark not in memory_results:
                 memory_results[benchmark] = []
