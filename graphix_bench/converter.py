@@ -43,7 +43,7 @@ def convert(qiskit_circuit: QuantumCircuit) -> Circuit:
         The converted circuit in Graphix format.
     """
     parser = OpenQASMParser()
-    transpiled_circuit = transpile(qiskit_circuit, basis_gates=list(NATIVE_GATE_SET))
+    transpiled_circuit = transpile(qiskit_circuit, basis_gates=list(NATIVE_GATE_SET), optimization_level=0)
 
     # To ensure that the register names are compatible with the QASM parser,
     # we create a new QuantumCircuit and compose the transpiled circuit onto it

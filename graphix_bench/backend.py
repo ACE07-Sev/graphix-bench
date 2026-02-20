@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from typing import Literal, TypeAlias
 
+from graphix.sim import (
+    DensityMatrixBackend,
+    StatevectorBackend,
+    TensorNetworkBackend,
+)
 
-class Backend(str, Enum):
-    """Enum for specifying the quantum simulation backend to use in graphix-bench."""
+_BuiltinBackend: TypeAlias = DensityMatrixBackend | StatevectorBackend | TensorNetworkBackend
+_BackendLiteral = Literal["statevector", "densitymatrix", "tensornetwork", "mps"]
 
-    STATEVECTOR = "statevector"
-    TENSORNETWORK = "tensornetwork"
-    DENSITYMATRIX = "densitymatrix"
-    MPS = "mps"
+BackendType: TypeAlias = _BuiltinBackend | _BackendLiteral
