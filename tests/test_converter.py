@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 from graphix import Circuit
 from qiskit import QuantumCircuit
 
@@ -137,5 +138,42 @@ def test_ccx() -> None:
     assert convert(qiskit_circuit).instruction == check_circuit.instruction
 
 
-# TODO: Add tests for measure gate
-# Currently, graphix_qasm_parser does not support measure gate
+@pytest.mark.parametrize("num_qubits", [3, 5, 10])
+def test_random_circuit(num_qubits: int) -> None:
+    circuit = Circuit(num_qubits)
+
+    for i in range(num_qubits):
+        circuit.h(i)
+
+    for i in range(num_qubits - 2):
+        circuit.ccx(i, i + 1, i + 2)
+
+    for i in range(num_qubits - 1):
+        circuit.swap(i, i + 1)
+
+    check_pattern = circuit.transpile().pattern
+    check_pattern.minimize_space()
+
+    qiskit_circuit = QuantumCircuit(num_qubits)
+
+    for i in range(num_qubits):
+        qiskit_circuit.h(i)
+
+    for i in range(num_qubits - 2):
+        qiskit_circuit.ccx(i, i + 1, i + 2)
+
+    for i in range(num_qubits - 1):
+        qiskit_circuit.swap(i, i + 1)
+
+    converted_circuit = convert(qiskit_circuit)
+    converted_pattern = converted_circuit.transpile().pattern
+    converted_pattern.minimize_space()
+
+    assert (
+        1
+        - abs(
+            np.vdot(check_pattern.simulate_pattern().psi, converted_pattern.simulate_pattern().psi),
+        )
+        ** 2
+        < 1e-6
+    )

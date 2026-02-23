@@ -5,32 +5,35 @@ from __future__ import annotations
 import os
 import threading
 import time
-from enum import StrEnum
-from typing import TYPE_CHECKING
+from enum import Enum
+from typing import TYPE_CHECKING, Any
 
 import psutil
-from graphix import Circuit
 from graphix.states import BasicStates
 from mqt.bench import get_benchmark_indep
 from mqt.bench.benchmarks import get_available_benchmark_names
+from typing_extensions import ParamSpec
 
 from graphix_bench.converter import convert
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from graphix import Pattern
+
     from graphix_bench import BackendType
 
 
-Benchmark = StrEnum("Benchmark", get_available_benchmark_names())  # type: ignore[misc]
+Benchmark = Enum("Benchmark", [(name, name) for name in get_available_benchmark_names()])  # type: ignore[misc]
+_P = ParamSpec("_P")
 
 
-def _performance_monitor(function: Callable) -> tuple[float, float]:  # type: ignore[type-arg]
+def _performance_monitor(function: Callable[_P, Any], *args: _P.args, **kwargs: _P.kwargs) -> tuple[float, float]:
     """Measure the peak memory usage and execution time of a function.
 
     Parameters
     ----------
-    function : Callable
+    function : Callable[_P, Any]
         The function to measure.
 
     Returns
@@ -52,7 +55,7 @@ def _performance_monitor(function: Callable) -> tuple[float, float]:  # type: ig
     t.start()
 
     start = time.perf_counter()
-    function()
+    function(*args, **kwargs)
     total = time.perf_counter() - start
 
     running = False
@@ -61,12 +64,17 @@ def _performance_monitor(function: Callable) -> tuple[float, float]:  # type: ig
     return total, peak / (1024**2)
 
 
-def performance_monitor(function: Callable, num_shots: int = 10) -> tuple[float, float]:  # type: ignore[type-arg]
+def performance_monitor(
+    function: Callable[_P, Any],
+    num_shots: int = 10,
+    *args: _P.args,
+    **kwargs: _P.kwargs,
+) -> tuple[float, float]:
     """Run the performance monitor multiple times and average the results.
 
     Parameters
     ----------
-    function : Callable
+    function : Callable[_P, Any]
         The function to measure.
     num_shots : int, optional, default=10
         The number of times to run the function for averaging.
@@ -80,7 +88,7 @@ def performance_monitor(function: Callable, num_shots: int = 10) -> tuple[float,
     total_peak = 0.0
 
     for _ in range(num_shots):
-        time, peak = _performance_monitor(function)
+        time, peak = _performance_monitor(function, *args, **kwargs)
         total_time += time
         total_peak += peak
 
@@ -88,7 +96,7 @@ def performance_monitor(function: Callable, num_shots: int = 10) -> tuple[float,
 
 
 def run_benchmark_circuit(
-    circuit: Circuit,
+    pattern: Pattern,
     backend: BackendType = "statevector",
     num_shots: int = 10,
 ) -> tuple[float, float]:
@@ -96,8 +104,8 @@ def run_benchmark_circuit(
 
     Parameters
     ----------
-    circuit : Circuit
-        The Graphix circuit to run the benchmark on.
+    pattern : Pattern
+        The Graphix pattern to run the benchmark on.
     backend : BackendType, optional, default="statevector"
         The backend to use for simulation.
     num_shots : int, optional, default=10
@@ -108,18 +116,12 @@ def run_benchmark_circuit(
     tuple[float, float]
         A tuple containing the total execution time in seconds and the memory usage in MB.
     """
-    if not isinstance(circuit, Circuit):
-        raise TypeError(
-            f"`circuit` must be of type `graphix.Circuit`. Received {type(circuit)} instead.",
-        )
-
-    def run() -> None:
-        circuit.transpile().pattern.simulate_pattern(
-            backend=backend,
-            input_state=BasicStates.ZERO,
-        )
-
-    total_time, peak_mb = performance_monitor(run, num_shots=num_shots)
+    total_time, peak_mb = performance_monitor(
+        pattern.simulate_pattern,  # type: ignore[arg-type]
+        backend=backend,
+        input_state=BasicStates.ZERO,
+        num_shots=num_shots,
+    )
 
     return total_time, peak_mb
 
@@ -129,6 +131,7 @@ def run_benchmark(
     circuit_size: int,
     backend: BackendType = "statevector",
     num_shots: int = 10,
+    minimize_space: bool = False,
 ) -> tuple[float, float]:
     """Run a specific benchmark with given circuit size and backend.
 
@@ -142,14 +145,27 @@ def run_benchmark(
         The backend to use for simulation.
     num_shots : int, optional, default=10
         The number of shots to run the benchmark for averaging.
+    minimize_space : bool, optional, default=False
+        Whether to minimize space usage of the pattern before running the benchmark.
 
     Returns
     -------
     tuple[float, float]
         A tuple containing the total execution time in seconds and the memory usage in MB.
     """
+    converted_pattern = (
+        convert(
+            get_benchmark_indep(benchmark=benchmark.value, circuit_size=circuit_size),
+        )
+        .transpile()
+        .pattern
+    )
+
+    if minimize_space:
+        converted_pattern.minimize_space()
+
     return run_benchmark_circuit(
-        convert(get_benchmark_indep(benchmark=str(benchmark), circuit_size=circuit_size)),
+        converted_pattern,
         backend=backend,
         num_shots=num_shots,
     )
