@@ -132,6 +132,7 @@ def run_benchmark(
     backend: BackendType = "statevector",
     num_shots: int = 10,
     minimize_space: bool = False,
+    pauli_presimulation: bool = False,
 ) -> tuple[float, float]:
     """Run a specific benchmark with given circuit size and backend.
 
@@ -147,6 +148,8 @@ def run_benchmark(
         The number of shots to run the benchmark for averaging.
     minimize_space : bool, optional, default=False
         Whether to minimize space usage of the pattern before running the benchmark.
+    pauli_presimulation : bool, optional, default=False
+        Whether to perform Pauli presimulation before running the benchmark.
 
     Returns
     -------
@@ -163,6 +166,10 @@ def run_benchmark(
 
     if minimize_space:
         converted_pattern.minimize_space()
+
+    if pauli_presimulation:
+        converted_pattern.remove_input_nodes()
+        converted_pattern.perform_pauli_measurements()
 
     return run_benchmark_circuit(
         converted_pattern,
