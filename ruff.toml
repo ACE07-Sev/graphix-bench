@@ -1,0 +1,83 @@
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".temp",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+line-length = 120
+
+[lint]
+preview = true
+select = ["ALL"]
+extend-ignore = [
+  "C90",     # Complexity
+  "E74",     # Ambiguous name
+  "ERA",     # Commented out code
+  "FBT",     # Boolean positional arguments
+  "FIX",     # Fixme
+  "PLR091",  # Too many XXX
+  "PLR0904", # Too many public methods
+  "PLR2004", # Magic value comparison
+  "S101",    # assert
+  "T20",     # print
+  "TD",      # Todo
+
+  # Tentative ignores
+  "ANN",     # Missing annotations
+  "CPY",     # Copyright
+  "DOC",     # Docstring
+  "E501",    # Line too long
+  "EM10",    # Raise string
+  "PLR1702", # Too many nests
+  "PLW1641", # __hash__ missing
+  "PT011",   # pytest raises too broad
+  "SLF001",  # Private access
+  "TRY003",  # Raise vanilla args
+]
+# Allow "α" (U+03B1 GREEK SMALL LETTER ALPHA) which could be confused for "a"
+# Allow "×" (U+00D7 MULTIPLICATION SIGN) which could be confused for "x"
+allowed-confusables = ["α", "×"]
+
+[format]
+docstring-code-format = true
+
+[lint.extend-per-file-ignores]
+"tests/*.py" = [
+  "D10",     # Allow undocumented items
+  "PLC2701", # Allow private imports
+  "PLR6301", # self not used
+]
+
+[lint.pydocstyle]
+convention = "numpy"
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.isort]
+required-imports = ["from __future__ import annotations"]
